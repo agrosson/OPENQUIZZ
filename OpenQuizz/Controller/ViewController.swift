@@ -9,7 +9,7 @@
 import UIKit
 
 class ViewController: UIViewController {
-
+    
     @IBOutlet weak var newGameButton: UIButton!
     
     @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
@@ -28,9 +28,14 @@ class ViewController: UIViewController {
         NotificationCenter.default.addObserver(self, selector: #selector(questionsLoaded), name: name, object: nil)
         
         startNewGame()
-   
-     let  panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(dragQuestionView(_:)))
-    questionView.addGestureRecognizer(panGestureRecognizer)
+        /* 1. je crée un objet de type UIPanGestureRecognizer
+         a. Paramètre target: self car c'est le controlleur qui détecte
+         b. action : un fonction que l'on crée et qui va déterminer l'action associée au mouvement
+         2. J'ajoute cet objet à la vue qui doit detecter le mouvement : ici questionView
+         
+         */
+        let  panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(dragQuestionView(_:)))
+        questionView.addGestureRecognizer(panGestureRecognizer)
     }
     
     @objc func dragQuestionView(_ sender: UIPanGestureRecognizer) {
@@ -80,16 +85,44 @@ class ViewController: UIViewController {
         case .incorrect:
             game.answerCurrentQuestion(with: false)
         case .standard:
-           break
+            break
         }
         // mise à jour score
         scoreLabel.text = "\(game.score) / 10"
         
+        
+        /*
+         Objectif: glisser la vue hors de l'écran:
+         1. on obtient la largeur de l'écran
+         2. on crée un transformation que l'on animera
+         3. en focntion de la réponse la translation est vers la droite ou la gauche
+         4. On crée une animation sur la translation avec UIView.animate
+         */
+        
+        let widthScreen = UIScreen.main.bounds.width
+        let translationTransform: CGAffineTransform
+        if questionView.style == .correct {
+            translationTransform = CGAffineTransform(translationX: widthScreen, y: 0)
+        } else {
+            translationTransform = CGAffineTransform(translationX: -widthScreen, y: 0)
+        }
+        
+        UIView.animate(withDuration: 0.3, animations: {
+            self.questionView.transform = translationTransform
+        }) { (success) in
+            if success {
+                self.showQuestionView()
+            }
+        }
+    }
+    
+    private func showQuestionView(){
         // on remet la vue à sa place
         questionView.transform = .identity
+        // on reduit l'image
+        questionView.transform = CGAffineTransform(scaleX: 0.01, y: 0.01)
         // on remet le style standard
         questionView.style = .standard
-        
         
         // on regarde si le jeu est terminé
         switch game.state {
@@ -98,15 +131,24 @@ class ViewController: UIViewController {
         case .over:
             questionView.title = "Game Over"
         }
+       
+        UIView.animate(withDuration: 0.4, delay: 0, usingSpringWithDamping: 0.5, initialSpringVelocity: 0.5, options: [], animations: {
+            self.questionView.transform = .identity
+        }, completion: nil)
+     
+        
     }
+    
+    /*
+     */
     
     @objc func questionsLoaded() {
         activityIndicator.isHidden = true
         newGameButton.isHidden = false
         questionView.title = game.currentQuestion.title
-       
+        
     }
-
+    
     @IBAction func didTapNewGameButton() {
         startNewGame()
     }
